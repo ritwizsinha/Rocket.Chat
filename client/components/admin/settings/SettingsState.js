@@ -1,5 +1,5 @@
 import { Mongo } from 'meteor/mongo';
-import React, { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState, useLayoutEffect, useMemo } from 'react';
 
 import { PrivateSettingsCachedCollection } from '../../../../app/ui-admin/client/SettingsCachedCollection';
 
@@ -155,15 +155,65 @@ export function SettingsState({ children }) {
 		return !queries.every((query) => !!collection.findOne(query));
 	}, []);
 
-	const contextValue = {
+	const stateRef = useRef({
 		isLoading,
 		state,
 		persistedState,
 		hydrate,
 		isDisabled,
+	});
+
+	const subscribersRef = useRef(new Set());
+
+	const subscribe = (fn) => {
+		subscribersRef.current.add(fn);
+		return () => {
+			subscribersRef.current.delete(fn);
+		};
 	};
+
+	useLayoutEffect(() => {
+		stateRef.current = {
+			isLoading,
+			state,
+			persistedState,
+			hydrate,
+			isDisabled,
+		};
+
+		for (const fn of subscribersRef.current) {
+			fn(stateRef.current);
+		}
+	});
+
+	const contextValue = useMemo(() => ({
+		stateRef,
+		subscribe,
+	}), []);
 
 	return <SettingsContext.Provider children={children} value={contextValue} />;
 }
 
-export const useSettingsState = () => useContext(SettingsContext);
+export const useSettingsState = (selector = (state) => state) => {
+	const { stateRef, subscribe } = useContext(SettingsContext);
+	const [value, setValue] = useState(() => selector(stateRef.current));
+	const previousValueRef = useRef();
+
+	useEffect(() => {
+		const unsubscribe = subscribe((state) => {
+			const newValue = selector(state);
+			if (newValue !== previousValueRef.current) {
+				setValue((previousValue) => {
+					previousValueRef.current = previousValue;
+					return newValue;
+				});
+			}
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	}, []);
+
+	return value;
+};

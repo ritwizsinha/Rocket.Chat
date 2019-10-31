@@ -6,9 +6,11 @@ import { useReactiveValue } from '../../../hooks/useReactiveValue';
 const SettingContext = createContext({});
 
 export function SettingState({ children, setting: _id }) {
-	const { state, persistedState, hydrate, isDisabled } = useSettingsState();
+	const isDisabled = useSettingsState(({ isDisabled }) => isDisabled);
+	const persistedState = useSettingsState(({ persistedState }) => persistedState);
+	const hydrate = useSettingsState(({ hydrate }) => hydrate);
 
-	const setting = state.find((setting) => setting._id === _id);
+	const setting = useSettingsState(({ state }) => state.find((setting) => setting._id === _id));
 	const disabled = useReactiveValue(() => isDisabled(setting), [setting.blocked, setting.enableQuery]);
 
 	const settingRef = useRef();

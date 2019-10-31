@@ -6,13 +6,14 @@ import { useGroup } from './GroupState';
 const SectionContext = createContext({});
 
 export function SectionState({ children, section: name }) {
-	const { state, persistedState, hydrate } = useSettingsState();
+	const persistedState = useSettingsState(({ persistedState }) => persistedState);
+	const hydrate = useSettingsState(({ hydrate }) => hydrate);
 	const { _id: groupId } = useGroup();
 
 	name = name || '';
 
-	const settings = state.filter(({ group, section }) => group === groupId
-		&& ((!name && !section) || (name === section)));
+	const settings = useSettingsState(({ state }) => state.filter(({ group, section }) => group === groupId
+		&& ((!name && !section) || (name === section))));
 	const changed = settings.some(({ changed }) => changed);
 	const canReset = settings.some(({ value, packageValue }) => value !== packageValue);
 	const settingsIds = settings.map(({ _id }) => _id);

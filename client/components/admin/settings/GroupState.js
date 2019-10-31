@@ -13,10 +13,11 @@ import { useSettingsState } from './SettingsState';
 const GroupContext = createContext({});
 
 export function GroupState({ groupId }) {
-	const { state, persistedState, hydrate } = useSettingsState();
+	const persistedState = useSettingsState(({ persistedState }) => persistedState);
+	const hydrate = useSettingsState(({ hydrate }) => hydrate);
 
-	const group = state.find(({ _id, type }) => _id === groupId && type === 'group');
-	const settings = state.filter(({ group }) => group === groupId);
+	const group = useSettingsState(({ state }) => state.find(({ _id, type }) => _id === groupId && type === 'group'));
+	const settings = useSettingsState(({ state }) => state.filter(({ group }) => group === groupId));
 	const changed = settings.some(({ changed }) => changed);
 	const sections = Array.from(new Set(settings.map(({ section }) => section || '')));
 
